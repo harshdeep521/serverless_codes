@@ -12,6 +12,7 @@ provider:
     InventoryQueue: !Ref MessageQueue
     Sns : !Ref MyTopic
 
+
   iam:
     role:
       statements:

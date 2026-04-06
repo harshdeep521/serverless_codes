@@ -1,0 +1,28 @@
+{
+  "name": "myproject",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "serverless dev",
+    "invoke:list": "serverless invoke local -f ListProduct --path event.json",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1023.0",
+    "@aws-sdk/client-dynamodb": "^3.381.0",
+    "@aws-sdk/client-lambda": "^3.381.0",
+    "@aws-sdk/client-s3": "^3.381.0",
+    "@aws-sdk/client-sns": "^3.1022.0",
+    "@aws-sdk/client-sqs": "^3.1019.0",
+    "aws-jwt-verify": "^5.1.1",
+    "aws-lambda": "^1.0.7",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "@aws-sdk/lib-dynamodb": "^3.1017.0",
+    "@types/aws-lambda": "^8.10.161",
+    "@types/node": "^25.5.0",
+    "serverless": "^4",
+    "typescript": "^5"
+  }
+}

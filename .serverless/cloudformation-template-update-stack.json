@@ -1,0 +1,1356 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "AddProductLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-AddProduct"
+      }
+    },
+    "ListProductLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-ListProduct"
+      }
+    },
+    "UpdateProductLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-UpdateProduct"
+      }
+    },
+    "DeleteProductLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-DeleteProduct"
+      }
+    },
+    "SendMessageLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-SendMessage"
+      }
+    },
+    "ReceiveMessageLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-ReceiveMessage"
+      }
+    },
+    "PublishMessageLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-PublishMessage"
+      }
+    },
+    "SignUpLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-SignUp"
+      }
+    },
+    "LoginLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/myproject-dev-Login"
+      }
+    },
+    "IamRoleLambdaExecution": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "myproject",
+                  "dev",
+                  "lambda"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:CreateLogGroup",
+                    "logs:TagResource"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/myproject-dev*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/myproject-dev*:*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:PutItem",
+                    "dynamodb:Query",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:DeleteItem"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "ProductTable",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::Sub": "${ProductTable.Arn}/index/*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "iot:*"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ],
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "myproject",
+              "dev",
+              {
+                "Ref": "AWS::Region"
+              },
+              "lambdaRole"
+            ]
+          ]
+        }
+      }
+    },
+    "DynamoLayersLambdaLayer": {
+      "Type": "AWS::Lambda::LayerVersion",
+      "Properties": {
+        "Content": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1774784058848-2026-03-29T11:34:18.848Z/dynamoLayers.zip"
+        },
+        "LayerName": "dynamo-layer",
+        "Description": "DynamoDB SDK Layer",
+        "CompatibleRuntimes": [
+          "nodejs20.x"
+        ]
+      }
+    },
+    "AddProductLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-AddProduct",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "AddProduct"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "AddProductLogGroup"
+      ]
+    },
+    "ListProductLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-ListProduct",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "ListProduct"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "ListProductLogGroup"
+      ]
+    },
+    "UpdateProductLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-UpdateProduct",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "UpdateProduct"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "UpdateProductLogGroup"
+      ]
+    },
+    "DeleteProductLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-DeleteProduct",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "DeleteProduct"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "DeleteProductLogGroup"
+      ]
+    },
+    "SendMessageLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-SendMessage",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "SendMessage"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "SendMessageLogGroup"
+      ]
+    },
+    "ReceiveMessageLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-ReceiveMessage",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "ReceiveMessage"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "ReceiveMessageLogGroup"
+      ]
+    },
+    "PublishMessageLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-PublishMessage",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "PublishMessage"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "PublishMessageLogGroup"
+      ]
+    },
+    "SignUpLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-SignUp",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "SignUp"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "SignUpLogGroup"
+      ]
+    },
+    "LoginLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+          "S3Key": "serverless/myproject/dev/1775398592864-2026-04-05T14:16:32.864Z/myproject.zip"
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs22.x",
+        "FunctionName": "myproject-dev-Login",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Environment": {
+          "Variables": {
+            "AWS_EXECUTION_ENV": "true",
+            "InventoryQueue": {
+              "Ref": "MessageQueue"
+            },
+            "Sns": {
+              "Ref": "MyTopic"
+            },
+            "SLS_IOT_ENDPOINT": "a2dycaeg5wuudt-ats.iot.us-east-1.amazonaws.com",
+            "SLS_SERVICE": "myproject",
+            "SLS_STAGE": "dev",
+            "SLS_FUNCTION": "Login"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "LoginLogGroup"
+      ]
+    },
+    "AddProductLambdaVersionN7RBvFbd1Sgc7jZlaS5EutYiS5o4h6jHw6fy5zN1rk": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "AddProductLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "ListProductLambdaVersionXOx3gVHvrFMH1mbxnTo4hGYS3WgomcsgO1kmvJGM": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ListProductLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "UpdateProductLambdaVersionKA7YqCgDfe6U8XRf5CnytkJcjr27p6s24eMXwsXEPw": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "UpdateProductLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "DeleteProductLambdaVersionVdOOOVig0qL1gfTqfH76wtjt4dHxCYwoq9hz0nOhESs": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "DeleteProductLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "SendMessageLambdaVersione6AXTa9KwWn0yA5G1hDBieGezm20lVwhpH2m6HD8": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "SendMessageLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "ReceiveMessageLambdaVersiondi6Zg0hm8isaup8yZGiTpM7EelySr28jLUcKx3w3Y": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ReceiveMessageLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "PublishMessageLambdaVersion3JsfF9DGODjLyDFmJkC89TSnsqnxPGKSld1BPdm5K8": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "PublishMessageLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "SignUpLambdaVersiond2Fif3YxpbWoX5eKcMrUfDvl5OKeOIoRgRgu9OINc": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "SignUpLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "LoginLambdaVersionypXv1yBkoN5583uhSezSyIP3tVaJBktusE2ZAit78RQ": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "LoginLambdaFunction"
+        },
+        "CodeSha256": "tcj7AJNoXdj3Yybk78FwdSVjjiNCxFj3kzmGw8JdZMI="
+      }
+    },
+    "HttpApi": {
+      "Type": "AWS::ApiGatewayV2::Api",
+      "Properties": {
+        "Name": "dev-myproject",
+        "ProtocolType": "HTTP"
+      }
+    },
+    "HttpApiStage": {
+      "Type": "AWS::ApiGatewayV2::Stage",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "StageName": "$default",
+        "AutoDeploy": true,
+        "DefaultRouteSettings": {
+          "DetailedMetricsEnabled": false
+        }
+      }
+    },
+    "AddProductLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "AddProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationAddProduct": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "AddProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRoutePostAddproduct": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "POST /addproduct",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationAddProduct"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationAddProduct"
+    },
+    "ListProductLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "ListProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationListProduct": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "ListProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRouteGetListproduct": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "GET /listproduct",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationListProduct"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationListProduct"
+    },
+    "UpdateProductLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "UpdateProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationUpdateProduct": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "UpdateProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRoutePutUpdateproductIdVar": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "PUT /updateproduct/{id}",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationUpdateProduct"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationUpdateProduct"
+    },
+    "DeleteProductLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "DeleteProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationDeleteProduct": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "DeleteProductLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRouteDeleteDeleteproductIdVar": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "DELETE /deleteproduct/{id}",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationDeleteProduct"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationDeleteProduct"
+    },
+    "SignUpLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "SignUpLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationSignUp": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "SignUpLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRoutePostSignup": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "POST /signup",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationSignUp"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationSignUp"
+    },
+    "LoginLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "LoginLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationLogin": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "LoginLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRoutePostLogin": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "POST /login",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationLogin"
+              }
+            ]
+          ]
+        }
+      },
+      "DependsOn": "HttpApiIntegrationLogin"
+    },
+    "ProductTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "Inventory",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "PK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "SK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "GS1PK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "GS1SK",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "PK",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "SK",
+            "KeyType": "RANGE"
+          }
+        ],
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "GS1",
+            "KeySchema": [
+              {
+                "AttributeName": "GS1PK",
+                "KeyType": "HASH"
+              },
+              {
+                "AttributeName": "GS1SK",
+                "KeyType": "RANGE"
+              }
+            ],
+            "Projection": {
+              "ProjectionType": "ALL"
+            }
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST"
+      }
+    },
+    "DeadLetterQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "Inventory-dead",
+        "MessageRetentionPeriod": 1209600
+      }
+    },
+    "MessageQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "Inventory",
+        "MessageRetentionPeriod": 345600,
+        "RedrivePolicy": {
+          "maxReceiveCount": 3,
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "DeadLetterQueue",
+              "Arn"
+            ]
+          }
+        }
+      }
+    },
+    "MyTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "TopicName": "CreateOrder"
+      }
+    },
+    "MySubscription": {
+      "Type": "AWS::SNS::Subscription",
+      "Properties": {
+        "Protocol": "sqs",
+        "Endpoint": {
+          "Fn::GetAtt": [
+            "MessageQueue",
+            "Arn"
+          ]
+        },
+        "TopicArn": {
+          "Ref": "MyTopic"
+        }
+      }
+    },
+    "QueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "Queues": [
+          {
+            "Ref": "MessageQueue"
+          }
+        ],
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": "sqs:SendMessage",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "MessageQueue",
+                  "Arn"
+                ]
+              },
+              "Condition": {
+                "ArnEquals": {
+                  "aws:SourceArn": {
+                    "Ref": "MyTopic"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": "serverless-framework-deployments-us-east-1-1893f361-0fdf",
+      "Export": {
+        "Name": "sls-myproject-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "DynamoLayersLambdaLayerQualifiedArn": {
+      "Description": "Current Lambda layer version",
+      "Value": {
+        "Ref": "DynamoLayersLambdaLayer"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-DynamoLayersLambdaLayerQualifiedArn"
+      }
+    },
+    "DynamoLayersLambdaLayerHash": {
+      "Description": "Current Lambda layer hash",
+      "Value": "3a50174ee40dd98a957e4c24197fb42d7e0160bb",
+      "Export": {
+        "Name": "sls-myproject-dev-DynamoLayersLambdaLayerHash"
+      }
+    },
+    "DynamoLayersLambdaLayerS3Key": {
+      "Description": "Current Lambda layer S3Key",
+      "Value": "serverless/myproject/dev/1774784058848-2026-03-29T11:34:18.848Z/dynamoLayers.zip",
+      "Export": {
+        "Name": "sls-myproject-dev-DynamoLayersLambdaLayerS3Key"
+      }
+    },
+    "AddProductLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "AddProductLambdaVersionN7RBvFbd1Sgc7jZlaS5EutYiS5o4h6jHw6fy5zN1rk"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-AddProductLambdaFunctionQualifiedArn"
+      }
+    },
+    "ListProductLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ListProductLambdaVersionXOx3gVHvrFMH1mbxnTo4hGYS3WgomcsgO1kmvJGM"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-ListProductLambdaFunctionQualifiedArn"
+      }
+    },
+    "UpdateProductLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "UpdateProductLambdaVersionKA7YqCgDfe6U8XRf5CnytkJcjr27p6s24eMXwsXEPw"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-UpdateProductLambdaFunctionQualifiedArn"
+      }
+    },
+    "DeleteProductLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "DeleteProductLambdaVersionVdOOOVig0qL1gfTqfH76wtjt4dHxCYwoq9hz0nOhESs"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-DeleteProductLambdaFunctionQualifiedArn"
+      }
+    },
+    "SendMessageLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "SendMessageLambdaVersione6AXTa9KwWn0yA5G1hDBieGezm20lVwhpH2m6HD8"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-SendMessageLambdaFunctionQualifiedArn"
+      }
+    },
+    "ReceiveMessageLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ReceiveMessageLambdaVersiondi6Zg0hm8isaup8yZGiTpM7EelySr28jLUcKx3w3Y"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-ReceiveMessageLambdaFunctionQualifiedArn"
+      }
+    },
+    "PublishMessageLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "PublishMessageLambdaVersion3JsfF9DGODjLyDFmJkC89TSnsqnxPGKSld1BPdm5K8"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-PublishMessageLambdaFunctionQualifiedArn"
+      }
+    },
+    "SignUpLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "SignUpLambdaVersiond2Fif3YxpbWoX5eKcMrUfDvl5OKeOIoRgRgu9OINc"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-SignUpLambdaFunctionQualifiedArn"
+      }
+    },
+    "LoginLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "LoginLambdaVersionypXv1yBkoN5583uhSezSyIP3tVaJBktusE2ZAit78RQ"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-LoginLambdaFunctionQualifiedArn"
+      }
+    },
+    "HttpApiId": {
+      "Description": "Id of the HTTP API",
+      "Value": {
+        "Ref": "HttpApi"
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-HttpApiId"
+      }
+    },
+    "HttpApiUrl": {
+      "Description": "URL of the HTTP API",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "HttpApi"
+            },
+            ".execute-api.",
+            {
+              "Ref": "AWS::Region"
+            },
+            ".",
+            {
+              "Ref": "AWS::URLSuffix"
+            }
+          ]
+        ]
+      },
+      "Export": {
+        "Name": "sls-myproject-dev-HttpApiUrl"
+      }
+    }
+  }
+}

@@ -1,0 +1,203 @@
+# "org" ensures this Service is used with the correct Serverless Framework License Key.
+org: personaluse2
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: myproject
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  environment:
+    AWS_EXECUTION_ENV: true
+    InventoryQueue: !Ref MessageQueue
+    Sns : !Ref MyTopic
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+          - dynamodb:PutItem
+          - dynamodb:Query
+          - dynamodb:UpdateItem
+          - dynamodb:DeleteItem
+          Resource: 
+            - !GetAtt ProductTable.Arn
+            - !Sub "${ProductTable.Arn}/index/*"
+
+build:
+  bundler: esbuild
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    target: node20
+    platform: node
+    external:
+      - "@aws-sdk/*"
+      - "/opt/nodejs/db"
+      - "/opt/nodejs/validate"
+      - "/opt/nodejs/sqs"
+      - "/opt/nodejs/sns"
+      - "/opt/nodejs/cognito"
+      - "/opt/nodejs/verify"
+  
+package:
+  individually: true
+  patterns:
+    - '!node_modules/**'
+    - '!test/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!*.log'
+
+
+
+plugins:
+  #- serverless-esbuild
+  # Uncomment to easily set up a custom domain. Read the docs for more details:
+  # https://www.serverless.com/framework/docs/providers/aws/guide/domains
+  # domain: api.example.com
+layers:
+  dynamoLayers:
+   path: src/layers/nodejs
+   name: dynamo-layer
+   description : DynamoDB SDK Layer
+   compatibleRuntimes:
+    - nodejs20.x
+functions:
+  AddProduct:
+   handler: src/Product/product.handler
+  #  layers: 
+  #    - { Ref : DynamoLayersLambdaLayer}
+   events:
+    - httpApi:
+        path: /addproduct
+        method: post
+
+  ListProduct:
+    handler: src/Product/listProduct.handler
+    # layers: 
+    #   - { Ref: DynamoLayersLambdaLayer}
+    events:
+     - httpApi:
+        method: GET
+        path: "/listproduct"
+  
+  UpdateProduct:
+    handler: src/Product/updateProduct.handler
+    events:
+      - httpApi:
+          method: PUT
+          path: "/updateproduct/{id}"
+
+  DeleteProduct:
+    handler: src/Product/deleteProduct.handler
+    events:
+      - httpApi:
+          method: delete
+          path: "/deleteproduct/{id}"
+
+  SendMessage:
+    handler: src/Product/sendMessage.handler
+  
+  ReceiveMessage:
+    handler: src/Product/receieveMessage.handler
+
+  PublishMessage:
+    handler: src/Product/publishMessage.handler
+  
+  SignUp:
+    handler: src/Product/signup.handler
+    events:
+      - httpApi:
+          method: POST
+          path: "/signup"
+
+  Login:
+    handler: src/Product/login.handler
+    events:
+      - httpApi:
+          method: POST
+          path: "/login"
+
+  
+    
+  
+
+
+
+resources:
+  Resources:
+    ProductTable:
+     Type: AWS::DynamoDB::Table
+     Properties:
+      TableName: Inventory
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GS1PK
+          AttributeType: S
+        - AttributeName: GS1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GS1 
+          KeySchema:
+          - AttributeName: GS1PK
+            KeyType: HASH
+          - AttributeName: GS1SK
+            KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      BillingMode: PAY_PER_REQUEST
+
+    DeadLetterQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: Inventory-dead
+        MessageRetentionPeriod: 1209600
+
+    MessageQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: Inventory
+        MessageRetentionPeriod: 345600
+        RedrivePolicy:
+          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt  DeadLetterQueue.Arn 
+    
+    MyTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: CreateOrder
+
+    MySubscription:
+      Type: AWS::SNS::Subscription
+      Properties:
+        Protocol: sqs
+        Endpoint: !GetAtt MessageQueue.Arn
+        TopicArn: !Ref MyTopic
+
+    QueuePolicy:   # 👈 ADD HERE (same level)
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref MessageQueue
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: "sqs:SendMessage"
+              Resource: !GetAtt MessageQueue.Arn
+              Condition:
+                ArnEquals:
+                  aws:SourceArn: !Ref MyTopic
+
+

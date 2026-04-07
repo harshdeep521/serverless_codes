@@ -1,0 +1,17 @@
+name: My First Workflow
+
+on:
+  push:
+    branches:
+      - master   # or main (match your branch)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Print Message
+        run: echo "Hello CI/CD is working 🚀"
